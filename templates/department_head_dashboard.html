@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>院系主任仪表板</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .header {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 {
+            margin: 0;
+        }
+        .nav {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        .nav a {
+            margin: 0 10px;
+            padding: 10px 20px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            text-decoration: none;
+            color: #000;
+            transition: background-color 0.3s;
+        }
+        .nav a:hover {
+            background-color: #007bff;
+            color: white;
+        }
+        .container {
+            width: 80%;
+            margin: 20px auto;
+            background: white;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .content {
+            display: none;
+        }
+        .content.active {
+            display: block;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            text-align: left;
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f0f0f0;
+        }
+        .settings-icon {
+            cursor: pointer;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgb(0,0,0);
+            background-color: rgba(0,0,0,0.4);
+            padding-top: 60px;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .teacher-title {
+            cursor: pointer;
+            color: #007bff;
+            margin: 10px 0;
+        }
+        .teacher-title:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>{{ head.name }}主任，您好</h1>
+        <img src="https://img.icons8.com/material-outlined/24/000000/settings.png" alt="设置" class="settings-icon" onclick="openSettings()">
+    </div>
+    <div class="nav">
+        <a href="#" data-page="teacher-management" class="nav-link">教师管理</a>
+        <a href="#" data-page="personal-info" class="nav-link">个人信息</a>
+        <a href="#" data-page="department-overview" class="nav-link">院系概览</a>
+    </div>
+    <div class="container">
+        <div id="teacher-management" class="content active">
+            <h2>教师管理</h2>
+            <!-- 教师管理内容 -->
+            <button onclick="openAddTeacherModal()">添加教师</button>
+            <div id="teacher-titles">
+                <!-- 教师列表 -->
+                <table>
+                    <tr>
+                        <th>教师ID</th>
+                        <th>教师姓名</th>
+                        <th>性别</th>
+                        <th>电话</th>
+                        <th>办公室</th>
+                        <th>操作</th>
+                    </tr>
+                    {% for teacher in teachers %}
+                    <tr>
+                        <td>{{ teacher.TeacherID }}</td>
+                        <td><input type="text" value="{{ teacher.TeacherName }}" id="teacher-name-{{ teacher.TeacherID }}"></td>
+                        <td><input type="text" value="{{ teacher.TeacherGender }}" id="teacher-gender-{{ teacher.TeacherID }}"></td>
+                        <td><input type="text" value="{{ teacher.TeacherPhone }}" id="teacher-phone-{{ teacher.TeacherID }}"></td>
+                        <td><input type="text" value="{{ teacher.TeacherOffice }}" id="teacher-office-{{ teacher.TeacherID }}"></td>
+                        <td>
+                            <button onclick="updateTeacher('{{ teacher.TeacherID }}')">保存</button>
+                            <button onclick="deleteTeacher('{{ teacher.TeacherID }}')">删除</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        </div>
+        <div id="personal-info" class="content">
+            <h2>个人信息</h2>
+            <!-- 个人信息内容 -->
+            <p>姓名: {{ head.name }}</p>
+            <p>邮箱: {{ head.email }}</p>
+            <button onclick="editPersonalInfo()">编辑个人信息</button>
+        </div>
+        <div id="department-overview" class="content">
+            <h2>院系概览</h2>
+            <!-- 院系概览内容 -->
+            <p>院系名称: {{ department.name }}</p>
+            <p>院系代码: {{ department.code }}</p>
+            <p>院系联系电话: {{ department.phone }}</p>
+            <p>院系办公地点: {{ department.location }}</p>
+        </div>
+    </div>
+
+    <!-- 添加教师模态框 -->
+    <div id="addTeacherModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeAddTeacherModal()">&times;</span>
+            <h2>添加教师</h2>
+            <form id="addTeacherForm">
+                <label for="new-teacher-id">教师ID</label>
+                <input type="text" id="new-teacher-id" name="new-teacher-id" required><br><br>
+                <label for="new-teacher-name">教师姓名</label>
+                <input type="text" id="new-teacher-name" name="new-teacher-name" required><br><br>
+                <label for="new-teacher-gender">性别</label>
+                <input type="text" id="new-teacher-gender" name="new-teacher-gender" required><br><br>
+                <label for="new-teacher-phone">电话</label>
+                <input type="text" id="new-teacher-phone" name="new-teacher-phone" required><br><br>
+                <label for="new-teacher-office">办公室</label>
+                <input type="text" id="new-teacher-office" name="new-teacher-office" required><br><br>
+                <button type="button" onclick="submitNewTeacher()">添加教师</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 设置模态框 -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeSettings()">&times;</span>
+            <h2>设置</h2>
+            <form id="settingsForm">
+                <label for="current-password">当前密码</label>
+                <input type="password" id="current-password" name="current-password" required><br><br>
+                <label for="new-password">新密码</label>
+                <input type="password" id="new-password" name="new-password" required><br><br>
+                <label for="confirm-password">确认新密码</label>
+                <input type="password" id="confirm-password" name="confirm-password" required><br><br>
+                <button type="button" onclick="changePassword()">更改密码</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // 导航切换内容
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                document.querySelectorAll('.content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                const page = link.getAttribute('data-page');
+                document.getElementById(page).classList.add('active');
+            });
+        });
+
+        // 打开设置窗口
+        function openSettings() {
+            document.getElementById('settingsModal').style.display = 'block';
+        }
+
+        // 关闭设置窗口
+        function closeSettings() {
+            document.getElementById('settingsModal').style.display = 'none';
+        }
+
+        // 更改密码
+        function changePassword() {
+            const currentPassword = document.getElementById('current-password').value;
+            const newPassword = document.getElementById('new-password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+
+            if (newPassword !== confirmPassword) {
+                alert("新密码和确认密码不一致！");
+                return;
+            }
+
+            // 发送更改密码请求到后端
+            fetch('/change_password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    currentPassword: currentPassword,
+                    newPassword: newPassword
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('网络响应不正常');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    alert('密码更改成功');
+                    closeSettings();
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                alert('请求失败，请稍后再试');
+                console.error('Error:', error);
+            });
+        }
+
+        // 打开添加教师模态框
+        function openAddTeacherModal() {
+            document.getElementById('addTeacherModal').style.display = 'block';
+        }
+
+        // 关闭添加教师模态框
+        function closeAddTeacherModal() {
+            document.getElementById('addTeacherModal').style.display = 'none';
+        }
+
+        // 提交新教师信息
+        function submitNewTeacher() {
+            const teacherId = document.getElementById('new-teacher-id').value;
+            const teacherName = document.getElementById('new-teacher-name').value;
+            const teacherGender = document.getElementById('new-teacher-gender').value;
+            const teacherPhone = document.getElementById('new-teacher-phone').value;
+            const teacherOffice = document.getElementById('new-teacher-office').value;
+
+            // 发送添加教师请求到后端
+            fetch('/add_teacher', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    teacherId: teacherId,
+                    teacherName: teacherName,
+                    teacherGender: teacherGender,
+                    teacherPhone: teacherPhone,
+                    teacherOffice: teacherOffice
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('网络响应不正常');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    alert('教师添加成功');
+                    closeAddTeacherModal();
+                    location.reload();  // 刷新页面以显示新添加的教师
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                alert('请求失败，请稍后再试');
+                console.error('Error:', error);
+            });
+        }
+
+        // 显示教师详情
+        function showTeacherDetails(teacherId) {
+            fetch(`/get_teacher_details?teacher_id=${teacherId}`)
+            .then(response => response.json())
+            .then(data => {
+                const teacherDetails = document.querySelector('#teacher-details table');
+                teacherDetails.innerHTML = `
+                    <tr>
+                        <th>教师ID</th>
+                        <th>教师姓名</th>
+                        <th>性别</th>
+                        <th>电话</th>
+                        <th>办公室</th>
+                        <th>操作</th>
+                    </tr>
+                `;
+                data.teachers.forEach(teacher => {
+                    teacherDetails.innerHTML += `
+                        <tr>
+                            <td>${teacher.teacher_id}</td>
+                            <td><input type="text" value="${teacher.teacher_name}" id="teacher-name-${teacher.teacher_id}"></td>
+                            <td><input type="text" value="${teacher.gender}" id="teacher-gender-${teacher.teacher_id}"></td>
+                            <td><input type="text" value="${teacher.phone}" id="teacher-phone-${teacher.teacher_id}"></td>
+                            <td><input type="text" value="${teacher.office}" id="teacher-office-${teacher.teacher_id}"></td>
+                            <td>
+                                <button onclick="updateTeacher('${teacher.teacher_id}')">保存</button>
+                                <button onclick="deleteTeacher('${teacher.teacher_id}')">删除</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            });
+        }
+
+        // 更新教师信息
+        function updateTeacher(teacherId) {
+            const nameInput = document.getElementById(`teacher-name-${teacherId}`).value;
+            const genderInput = document.getElementById(`teacher-gender-${teacherId}`).value;
+            const phoneInput = document.getElementById(`teacher-phone-${teacherId}`).value;
+            const officeInput = document.getElementById(`teacher-office-${teacherId}`).value;
+
+            // 发送更新教师请求到后端
+            fetch('/update_teacher', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    teacherId: teacherId,
+                    teacherName: nameInput,
+                    teacherGender: genderInput,
+                    teacherPhone: phoneInput,
+                    teacherOffice: officeInput
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('网络响应不正常');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    alert('教师信息更新成功');
+                    location.reload();  // 刷新页面以显示更新后的信息
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                alert('请求失败，请稍后再试');
+                console.error('Error:', error);
+            });
+        }
+
+        // 删除教师信息
+        function deleteTeacher(teacherId) {
+            if (!confirm('确定要删除该教师吗？')) {
+                return;
+            }
+
+            // 发送删除教师请求到后端
+            fetch('/delete_teacher', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    teacherId: teacherId
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('网络响应不正常');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    alert('教师删除成功');
+                    location.reload();  // 刷新页面以显示更新后的信息
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                alert('请求失败，请稍后再试');
+                console.error('Error:', error);
+            });
+        }
+
+        // 编辑个人信息
+        function editPersonalInfo() {
+            // 这里可以添加编辑个人信息的逻辑，例如显示一个模态框让院系主任编辑个人信息
+            alert("编辑个人信息功能尚未实现");
+        }
+    </script>
+</body>
+</html>

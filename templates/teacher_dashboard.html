@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>教师仪表板</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .header {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 {
+            margin: 0;
+        }
+        .nav {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        .nav a {
+            margin: 0 10px;
+            padding: 10px 20px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            text-decoration: none;
+            color: #000;
+            transition: background-color 0.3s;
+        }
+        .nav a:hover {
+            background-color: #007bff;
+            color: white;
+        }
+        .container {
+            width: 80%;
+            margin: 20px auto;
+            background: white;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .content {
+            display: none;
+        }
+        .content.active {
+            display: block;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            text-align: left;
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f0f0f0;
+        }
+        .settings-icon {
+            cursor: pointer;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgb(0,0,0);
+            background-color: rgba(0,0,0,0.4);
+            padding-top: 60px;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .course-title {
+            cursor: pointer;
+            color: #007bff;
+            margin: 10px 0;
+        }
+        .course-title:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>{{ teacher_info.TeacherName }}老师，您好</h1>
+        <img src="https://img.icons8.com/material-outlined/24/000000/settings.png" alt="设置" class="settings-icon" onclick="openSettings()">
+    </div>
+    <div class="nav">
+        <a href="#" data-page="course-management" class="nav-link">课程管理</a>
+        <a href="#" data-page="student-grades" class="nav-link">学生成绩</a>
+        <a href="#" data-page="personal-info" class="nav-link">个人信息</a>
+        <a href="#" data-page="feedback" class="nav-link">成绩反馈</a>
+    </div>
+    <div class="container">
+        <div id="course-management" class="content active">
+            <h2>课程管理</h2>
+            <!-- 课程管理内容 -->
+            <div id="course-list">
+                <!-- 课程列表将动态加载 -->
+                <table>
+                    <tr>
+                        <th>课程ID</th>
+                        <th>课程名称</th>
+                        <th>课程学期</th>
+                        <th>课程学分</th>
+                        <th>课程描述</th>
+                        <th>操作</th>
+                    </tr>
+                    {% for course in courses %}
+                    <tr>
+                        <td><input type="text" value="{{ course.CourseID }}" readonly></td>
+                        <td><input type="text" value="{{ course.CourseName }}" id="course-name-{{ course.CourseID }}"></td>
+                        <td><input type="text" value="{{ course.CourseTerm }}" id="course-term-{{ course.CourseID }}"></td>
+                        <td><input type="number" value="{{ course.CourseCredits }}" id="course-credits-{{ course.CourseID }}"></td>
+                        <td><input type="text" value="{{ course.CourseDescription }}" id="course-description-{{ course.CourseID }}"></td>
+                        <td><button onclick="updateCourse('{{ course.CourseID }}')">保存</button></td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+            <!-- 添加课程按钮放在左下角 -->
+            <button style="position: absolute; bottom: 20px; left: 20px;" onclick="addCourse()">添加课程</button>
+        </div>
+        
+        <!-- 添加课程模态框 -->
+        <div id="addCourseModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeAddCourseModal()">&times;</span>
+                <h2>添加课程</h2>
+                <form id="addCourseForm">
+                    <label for="new-course-id">课程ID</label>
+                    <input type="text" id="new-course-id" name="new-course-id" required><br><br>
+                    <label for="new-course-name">课程名称</label>
+                    <input type="text" id="new-course-name" name="new-course-name" required><br><br>
+                    <label for="new-course-term">课程学期</label>
+                    <input type="text" id="new-course-term" name="new-course-term" required><br><br>
+                    <label for="new-course-credits">课程学分</label>
+                    <input type="number" id="new-course-credits" name="new-course-credits" required><br><br>
+                    <label for="new-course-description">课程描述</label>
+                    <input type="text" id="new-course-description" name="new-course-description" required><br><br>
+                    <button type="button" onclick="submitNewCourse()">添加课程</button>
+                </form>
+            </div>
+        </div>
+
+
+        <div id="student-grades" class="content">
+            <h2>学生成绩</h2>
+            <!-- 课程列表 -->
+            <div id="course-titles">
+                {% for course in courses %}
+                <div class="course-title" onclick="showCourseGrades('{{ course.CourseID }}')">{{ course.CourseName }}</div>
+                {% endfor %}
+            </div>
+            <!-- 学生成绩内容 -->
+            <div id="grades-table">
+                <table>
+                    <tr>
+                        <th>学生姓名</th>
+                        <th>课程名称</th>
+                        <th>成绩</th>
+                        <th>操作</th>
+                    </tr>
+                    <tbody id="grades-body">
+                        <!-- 学生成绩数据将动态加载 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- 添加学生成绩模态框 -->
+        <div id="addGradeModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeAddGradeModal()">&times;</span>
+                <h2>添加成绩</h2>
+                <form id="addGradeForm">
+                    <label for="student-id">学生ID</label>
+                    <input type="text" id="student-id" name="student-id" required><br><br>
+                    <label for="course-id">课程ID</label>
+                    <input type="text" id="course-id" name="course-id" required><br><br>
+                    <label for="grade-level">成绩</label>
+                    <input type="text" id="grade-level" name="grade-level" required><br><br>
+                    <button type="button" onclick="submitNewGrade()">添加成绩</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="personal-info" class="content">
+            <h2>个人信息</h2>
+            <!-- 个人信息内容 -->
+            <p>姓名: {{ teacher_info.TeacherName }}</p>
+            <p>电话: {{ teacher_info.TeacherPhone }}</p>
+            <p>办公室: {{ teacher_info.TeacherOffice }}</p>
+            <button onclick="editPersonalInfo()">编辑个人信息</button>
+        </div>
+        <!-- 编辑个人信息模态框 -->
+<div id="editPersonalInfoModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeEditPersonalInfoModal()">&times;</span>
+        <h2>编辑个人信息</h2>
+        <form id="editPersonalInfoForm">
+            <label for="edit-teacher-name">姓名</label>
+            <input type="text" id="edit-teacher-name" name="edit-teacher-name" required><br><br>
+            <label for="edit-teacher-phone">电话</label>
+            <input type="text" id="edit-teacher-phone" name="edit-teacher-phone" required><br><br>
+            <label for="edit-teacher-office">办公室</label>
+            <input type="text" id="edit-teacher-office" name="edit-teacher-office" required><br><br>
+            <button type="button" onclick="submitEditPersonalInfo()">保存</button>
+        </form>
+    </div>
+</div>
+
+
+
+
+        <div id="feedback" class="content">
+            <h2>成绩反馈</h2>
+            <!-- 成绩反馈内容 -->
+        </div>
+    </div>
+
+    <!-- 设置模态框 -->
+<div id="settingsModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeSettings()">&times;</span>
+        <h2>设置</h2>
+        <form id="settingsForm">
+            <div class="form-group">
+                <label for="user-id">用户ID</label>
+                <input type="text" id="user-id" name="userId" required>
+            </div>
+            <div class="form-group">
+                <label for="role">身份</label>
+                <select id="role" name="role" required>
+                    <option value="Student">学生</option>
+                    <option value="Teacher">教师</option>
+                    <option value="DepartmentHead">院系主任</option>
+                    <option value="Admin">管理员</option>
+                </select>
+            </div>
+            <label for="current-password">当前密码</label>
+            <input type="password" id="current-password" name="current-password" required><br><br>
+            <label for="new-password">新密码</label>
+            <input type="password" id="new-password" name="new-password" required><br><br>
+            <label for="confirm-password">确认新密码</label>
+            <input type="password" id="confirm-password" name="confirm-password" required><br><br>
+            <button type="button" onclick="changePassword()">更改密码</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    // 导航切换内容
+    document.querySelectorAll('.nav-link').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            document.querySelectorAll('.content').forEach(content => {
+                content.classList.remove('active');
+            });
+            const page = link.getAttribute('data-page');
+            document.getElementById(page).classList.add('active');
+        });
+    });
+
+    // 打开设置窗口
+    function openSettings() {
+        document.getElementById('settingsModal').style.display = 'block';
+    }
+
+    // 关闭设置窗口
+    function closeSettings() {
+        document.getElementById('settingsModal').style.display = 'none';
+    }
+
+    // 更改密码
+    function changePassword() {
+        const userId = document.getElementById('user-id').value;
+        const role = document.getElementById('role').value;
+        const currentPassword = document.getElementById('current-password').value;
+        const newPassword = document.getElementById('new-password').value;
+        const confirmPassword = document.getElementById('confirm-password').value;
+
+        if (newPassword !== confirmPassword) {
+            alert("新密码和确认密码不一致！");
+            return;
+        }
+
+        // 发送更改密码请求到后端
+        fetch('/change_password', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                userId: userId,
+                role: role,
+                currentPassword: currentPassword,
+                newPassword: newPassword
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('网络响应不正常');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                alert('密码更改成功');
+                closeSettings();
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(error => {
+            alert('请求失败，请稍后再试');
+            console.error('Error:', error);
+        });
+    }
+
+
+     // 更新课程信息
+    function updateCourse(courseId) {
+        const courseName = document.getElementById(`course-name-${courseId}`).value;
+        const courseTerm = document.getElementById(`course-term-${courseId}`).value;
+        const courseCredits = document.getElementById(`course-credits-${courseId}`).value;
+        const courseDescription = document.getElementById(`course-description-${courseId}`).value;
+
+        fetch('/update_course', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                courseId: courseId,
+                courseName: courseName,
+                courseTerm: courseTerm,
+                courseCredits: courseCredits,
+                courseDescription: courseDescription
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('课程信息更新成功');
+            } else {
+                alert('课程信息更新失败');
+            }
+        })
+        .catch(error => {
+            alert('请求失败，请稍后再试');
+            console.error('Error:', error);
+        });
+    }
+
+
+    // 打开添加课程模态框
+    function addCourse() {
+        document.getElementById('addCourseModal').style.display = 'block';
+    }
+
+    // 关闭添加课程模态框
+    function closeAddCourseModal() {
+        document.getElementById('addCourseModal').style.display = 'none';
+    }
+
+    // 提交新课程信息
+    function submitNewCourse() {
+        const courseId = document.getElementById('new-course-id').value;
+        const courseName = document.getElementById('new-course-name').value;
+        const courseTerm = document.getElementById('new-course-term').value;
+        const courseCredits = document.getElementById('new-course-credits').value;
+        const courseDescription = document.getElementById('new-course-description').value;
+
+        fetch('/add_course', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                courseId: courseId,
+                courseName: courseName,
+                courseTerm: courseTerm,
+                courseCredits: courseCredits,
+                courseDescription: courseDescription
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('课程添加成功');
+                closeAddCourseModal();
+                location.reload(); // 刷新页面以显示新添加的课程
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(error => {
+            alert('请求失败，请稍后再试');
+            console.error('Error:', error);
+        });
+    }
+    
+
+        // 编辑个人信息
+        function editPersonalInfo() {
+        document.getElementById('edit-teacher-name').value = "{{ teacher_info.TeacherName }}";
+        document.getElementById('edit-teacher-phone').value = "{{ teacher_info.TeacherPhone }}";
+        document.getElementById('edit-teacher-office').value = "{{ teacher_info.TeacherOffice }}";
+        document.getElementById('editPersonalInfoModal').style.display = 'block';
+    }
+
+    function closeEditPersonalInfoModal() {
+        document.getElementById('editPersonalInfoModal').style.display = 'none';
+    }
+
+    function submitEditPersonalInfo() {
+        const teacherName = document.getElementById('edit-teacher-name').value;
+        const teacherPhone = document.getElementById('edit-teacher-phone').value;
+        const teacherOffice = document.getElementById('edit-teacher-office').value;
+
+        fetch('/update_personal_info', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                teacherName: teacherName,
+                teacherPhone: teacherPhone,
+                teacherOffice: teacherOffice
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('个人信息更新成功');
+                closeEditPersonalInfoModal();
+                location.reload(); // 刷新页面以显示更新后的信息
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(error => {
+            alert('请求失败，请稍后再试');
+            console.error('Error:', error);
+        });
+    }
+
+        // 显示课程成绩
+    function showCourseGrades(courseId) {
+        fetch(`/get_grades?course_id=${courseId}`)
+        .then(response => response.json())
+        .then(data => {
+            const gradesBody = document.getElementById('grades-body');
+            gradesBody.innerHTML = '';
+            data.grades.forEach(grade => {
+                gradesBody.innerHTML += `
+                    <tr>
+                        <td>${grade.student_name}</td>
+                        <td>${grade.course_name}</td>
+                        <td><input type="text" value="${grade.grade_level || ''}" data-student-id="${grade.student_id}" data-course-id="${courseId}"></td>
+                        <td><button onclick="updateGrade('${grade.student_id}', '${courseId}')">保存</button></td>
+                    </tr>
+                `;
+            });
+        });
+    }
+
+   // 更新成绩
+function updateGrade(studentId, courseId) {
+    const input = document.querySelector(`input[data-student-id="${studentId}"][data-course-id="${courseId}"]`);
+    const newGrade = input.value;
+
+    fetch('/record_grade', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            studentId: studentId,
+            courseId: courseId,
+            gradeLevel: newGrade,
+            recordTime: new Date().toISOString()  // 使用ISO 8601格式化日期时间
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('成绩更新成功');
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(error => {
+        alert('请求失败，请稍后再试');
+        console.error('Error:', error);
+    });
+}
+
+
+
+    // 添加学生成绩
+    function submitNewGrade() {
+        const studentId = document.getElementById('student-id').value;
+        const courseId = document.getElementById('course-id').value;
+        const gradeLevel = document.getElementById('grade-level').value;
+
+        fetch('/record_grade', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                studentId: studentId,
+                courseId: courseId,
+                gradeLevel: gradeLevel,
+                recordTime: new Date().toISOString()
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('成绩添加成功');
+                closeAddGradeModal();
+                showCourseGrades(courseId);
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(error => {
+            alert('请求失败，请稍后再试');
+            console.error('Error:', error);
+        });
+    }
+
+    // 打开添加成绩模态框
+    function openAddGradeModal() {
+        document.getElementById('addGradeModal').style.display = 'block';
+    }
+
+    // 关闭添加成绩模态框
+    function closeAddGradeModal() {
+        document.getElementById('addGradeModal').style.display = 'none';
+    }
+    </script>
+</body>
+</html>
